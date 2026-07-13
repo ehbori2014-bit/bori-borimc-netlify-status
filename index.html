@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10151f">
+  <title>BoriMC 서버 상태</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10151f;
+      --panel: #171f2d;
+      --panel-2: #1f2938;
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #edf4ff;
+      --muted: #9caabd;
+      --green: #32d583;
+      --red: #ff5a66;
+      --yellow: #ffd166;
+      --cyan: #59c8ff;
+      --shadow: rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(89, 200, 255, 0.10), transparent 260px),
+        radial-gradient(circle at top left, rgba(50, 213, 131, 0.10), transparent 320px),
+        var(--bg);
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 0 26px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      border: 1px solid var(--line);
+      background: #111827;
+      box-shadow: 0 10px 24px var(--shadow);
+      overflow: hidden;
+    }
+
+    .logo span:nth-child(1),
+    .logo span:nth-child(5),
+    .logo span:nth-child(9) {
+      background: #2fb36d;
+    }
+
+    .logo span:nth-child(2),
+    .logo span:nth-child(4),
+    .logo span:nth-child(8) {
+      background: #7b5b38;
+    }
+
+    .logo span:nth-child(3),
+    .logo span:nth-child(6),
+    .logo span:nth-child(7) {
+      background: #26364b;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 46px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .notice {
+      max-width: 450px;
+      padding: 13px 14px;
+      border: 1px solid rgba(89, 200, 255, 0.32);
+      background: rgba(89, 200, 255, 0.08);
+      color: #d9f2ff;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .status-panel,
+    .card,
+    .detail-panel {
+      border: 1px solid var(--line);
+      background: rgba(23, 31, 45, 0.94);
+      box-shadow: 0 18px 45px var(--shadow);
+      border-radius: 8px;
+    }
+
+    .status-panel {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .state {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .state-light {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--yellow);
+      box-shadow: 0 0 0 8px rgba(255, 209, 102, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .state.online .state-light {
+      background: var(--green);
+      box-shadow: 0 0 0 8px rgba(50, 213, 131, 0.12);
+    }
+
+    .state.offline .state-light {
+      background: var(--red);
+      box-shadow: 0 0 0 8px rgba(255, 90, 102, 0.12);
+    }
+
+    .state-title {
+      margin: 0;
+      font-size: clamp(32px, 9vw, 76px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .state-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .refresh-box {
+      display: grid;
+      justify-items: end;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    button {
+      border: 1px solid rgba(89, 200, 255, 0.42);
+      background: #223247;
+      color: var(--text);
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    button:hover {
+      border-color: rgba(89, 200, 255, 0.84);
+      background: #2a3b52;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      padding: 18px;
+      min-height: 132px;
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+    }
+
+    .card-label {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .card-value {
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+
+    .card-sub {
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .detail-panel {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .server-address {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    code {
+      padding: 8px 10px;
+      background: #0c121b;
+      border: 1px solid var(--line);
+      color: #d9f2ff;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .toast {
+      min-height: 22px;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .error {
+      color: #ffb4bb;
+    }
+
+    footer {
+      color: var(--muted);
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 850px) {
+      header,
+      .status-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .refresh-box {
+        justify-items: start;
+      }
+
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .wrap {
+        width: min(100% - 22px, 1120px);
+        padding-top: 16px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .logo {
+        width: 44px;
+        height: 44px;
+        margin-top: 2px;
+      }
+
+      .cards,
+      .detail-row {
+        grid-template-columns: 1fr;
+      }
+
+      .status-panel,
+      .card,
+      .detail-panel {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>BoriMC 서버 상태</h1>
+          <p class="subtitle">Minecraft 서버와 BoriMC 웹 응답 상태를 Netlify에서 대신 확인합니다.</p>
+        </div>
+      </div>
+      <div class="notice">
+        학교 인터넷에서 BoriMC 본 도메인이 차단되어도, 이 페이지는 Netlify를 통해 서버 상태를 확인합니다.
+      </div>
+    </header>
+
+    <main>
+      <section class="status-panel" aria-live="polite">
+        <div id="state" class="state checking">
+          <span class="state-light"></span>
+          <div>
+            <p id="stateTitle" class="state-title">확인 중</p>
+            <p id="stateNote" class="state-note">Netlify Function으로 서버 상태를 조회하고 있습니다.</p>
+          </div>
+        </div>
+        <div class="refresh-box">
+          <button id="refreshButton" type="button">수동 새로고침</button>
+          <span id="autoState">자동 갱신: 10초마다</span>
+        </div>
+      </section>
+
+      <section class="cards" aria-label="서버 요약">
+        <article class="card">
+          <div class="card-label">마크 핑</div>
+          <div id="pingValue" class="card-value">-</div>
+          <div class="card-sub">Netlify에서 서버로 측정</div>
+        </article>
+        <article class="card">
+          <div class="card-label">접속자</div>
+          <div id="playersValue" class="card-value">- / -</div>
+          <div class="card-sub">현재 / 최대</div>
+        </article>
+        <article class="card">
+          <div class="card-label">버전</div>
+          <div id="versionValue" class="card-value">-</div>
+          <div class="card-sub">서버 응답 기준</div>
+        </article>
+        <article class="card">
+          <div class="card-label">웹 응답속도</div>
+          <div id="webValue" class="card-value">-</div>
+          <div id="webSub" class="card-sub">HTTPS 응답 확인</div>
+        </article>
+      </section>
+
+      <section class="detail-panel">
+        <div class="detail-row">
+          <div class="detail-label">MOTD</div>
+          <div id="motdValue">-</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">서버 주소</div>
+          <div class="server-address">
+            <code id="addressValue">borimc.p-e.kr:10259</code>
+            <button id="copyButton" type="button">주소 복사</button>
+            <span id="copyToast" class="toast"></span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">마지막 갱신</div>
+          <div id="updatedValue">-</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">상태 메시지</div>
+          <div id="messageValue">처음 조회 중입니다.</div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      브라우저는 BoriMC 서버에 직접 연결하지 않습니다. 상태 조회는 Netlify Function이 대신 수행합니다.
+    </footer>
+  </div>
+
+  <script>
+    const SERVER_ADDRESS = "borimc.p-e.kr:10259";
+    const REFRESH_MS = 10000;
+
+    const els = {
+      state: document.getElementById("state"),
+      stateTitle: document.getElementById("stateTitle"),
+      stateNote: document.getElementById("stateNote"),
+      pingValue: document.getElementById("pingValue"),
+      playersValue: document.getElementById("playersValue"),
+      versionValue: document.getElementById("versionValue"),
+      motdValue: document.getElementById("motdValue"),
+      webValue: document.getElementById("webValue"),
+      webSub: document.getElementById("webSub"),
+      updatedValue: document.getElementById("updatedValue"),
+      messageValue: document.getElementById("messageValue"),
+      refreshButton: document.getElementById("refreshButton"),
+      copyButton: document.getElementById("copyButton"),
+      copyToast: document.getElementById("copyToast")
+    };
+
+    function setState(mode, title, note) {
+      els.state.className = `state ${mode}`;
+      els.stateTitle.textContent = title;
+      els.stateNote.textContent = note;
+    }
+
+    function dash(value) {
+      return value === undefined || value === null || value === "" ? "-" : value;
+    }
+
+    function formatDate(value) {
+      const date = value ? new Date(value) : new Date();
+      return new Intl.DateTimeFormat("ko-KR", {
+        dateStyle: "medium",
+        timeStyle: "medium"
+      }).format(date);
+    }
+
+    function readableMotd(motd) {
+      if (!motd) return "-";
+      if (typeof motd === "string") return motd;
+      if (typeof motd.clean === "string") return motd.clean;
+      if (Array.isArray(motd.clean)) return motd.clean.join(" ");
+      if (typeof motd.raw === "string") return motd.raw;
+      return String(motd);
+    }
+
+    async function getJson(path) {
+      const response = await fetch(path, {
+        method: "GET",
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+      });
+      if (!response.ok) {
+        throw new Error(`Function HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    async function refreshStatus() {
+      els.refreshButton.disabled = true;
+      setState("checking", "확인 중", "Netlify Function으로 서버 상태를 조회하고 있습니다.");
+      els.messageValue.classList.remove("error");
+
+      try {
+        const [mc, web] = await Promise.all([
+          getJson("/.netlify/functions/mc-status"),
+          getJson("/.netlify/functions/web-ping")
+        ]);
+
+        if (mc.online) {
+          setState("online", "온라인", "Minecraft 서버가 응답했습니다.");
+          els.pingValue.textContent = typeof mc.ping === "number" ? `${mc.ping}ms` : "-";
+          els.playersValue.textContent = `${dash(mc.players && mc.players.online)} / ${dash(mc.players && mc.players.max)}`;
+          els.versionValue.textContent = dash(mc.version);
+          els.motdValue.textContent = readableMotd(mc.motd);
+          els.messageValue.textContent = "서버 상태 조회 성공";
+        } else {
+          setState("offline", "오프라인", "Minecraft 서버가 응답하지 않았습니다.");
+          els.pingValue.textContent = "-";
+          els.playersValue.textContent = "- / -";
+          els.versionValue.textContent = "-";
+          els.motdValue.textContent = "-";
+          els.messageValue.textContent = mc.error ? `마크 상태: ${mc.error}` : "마크 서버 응답 없음";
+          els.messageValue.classList.add("error");
+        }
+
+        if (web.ok) {
+          els.webValue.textContent = `${web.responseMs}ms`;
+          els.webSub.textContent = `HTTP ${web.status}`;
+        } else {
+          els.webValue.textContent = "-";
+          els.webSub.textContent = web.error || "웹 응답 없음";
+        }
+
+        els.updatedValue.textContent = formatDate(mc.checkedAt || web.checkedAt);
+      } catch (error) {
+        setState("offline", "확인 실패", "Netlify Function 응답을 읽지 못했습니다.");
+        els.messageValue.textContent = "상태 조회 실패. 잠시 후 다시 시도하세요.";
+        els.messageValue.classList.add("error");
+        els.updatedValue.textContent = formatDate();
+      } finally {
+        els.refreshButton.disabled = false;
+      }
+    }
+
+    async function copyAddress() {
+      try {
+        await navigator.clipboard.writeText(SERVER_ADDRESS);
+        els.copyToast.textContent = "복사 완료";
+      } catch (error) {
+        els.copyToast.textContent = "복사 실패";
+      }
+      window.setTimeout(() => {
+        els.copyToast.textContent = "";
+      }, 1800);
+    }
+
+    els.refreshButton.addEventListener("click", refreshStatus);
+    els.copyButton.addEventListener("click", copyAddress);
+
+    refreshStatus();
+    window.setInterval(refreshStatus, REFRESH_MS);
+  </script>
+</body>
+</html>
