@@ -1,8 +1,8 @@
-# BoriMC Netlify Status
+# BoriMC Netlify Main
 
-BoriMC 마인크래프트 서버 상태를 Netlify 기본 도메인에서 확인하는 작은 상태 페이지입니다.
+`borisurvur.netlify.app`을 BoriMC 공식 메인 홈페이지로 쓰는 Netlify 프로젝트입니다.
 
-학교 인터넷에서 `borimc.p-e.kr`이 차단될 수 있으므로, 브라우저는 BoriMC 도메인이나 마크 서버 포트로 직접 요청하지 않습니다. 브라우저는 Netlify 사이트의 Function만 호출하고, Netlify Function이 대신 BoriMC 웹/API/마크 서버 상태를 조회합니다.
+`borimc.p-e.kr`은 메인 홈페이지가 아니라 Minecraft 서버 주소, API 서버, 백엔드 용도로 사용합니다. 브라우저는 `borimc.p-e.kr` 또는 `borimc.p-e.kr:10259`로 직접 `fetch`하지 않고 Netlify Function만 호출합니다.
 
 ## 포함 파일
 
@@ -15,46 +15,69 @@ borimc-netlify-status/
   netlify/
     functions/
       mc-status.js
+      server-status.js
       web-ping.js
+      register.js
+      register-request.js
+      public-config.js
+      auth-discord-start.js
+      auth-discord-callback.js
+      auth-google-start.js
+      auth-google-callback.js
+      auth-session.js
+      auth-logout.js
+      verification-status.js
+      verification-minecraft-code.js
+      verification-admin-request.js
       api-proxy.js
+      download-file.js
+      service-links.js
+      _shared/session.js
 ```
 
-## 기능
+## 현재 기능
 
-- 마인크래프트 서버 온라인/오프라인 표시
-- 마크 서버 핑 표시
-- 접속자 수 현재/최대 표시
-- 서버 버전 표시
-- MOTD 표시
-- BoriMC 웹서버 HTTPS 응답속도 표시
-- 10초 자동 갱신
-- 수동 새로고침
-- 서버 주소 `borimc.p-e.kr:10259` 복사
+- BoriMC 공식 메인 홈페이지 UI
+- 밝음/어둠 테마
+- 서버 주소 복사
+- 기존 메인 홈페이지 흐름 이전: 운영 허브, 가입/인증, 서버 규칙, 게임 가이드, 커뮤니티 게시판 안내
+- 실시간 서버 상태 카드
+- 상단 미니 상태 바
+- 학교망 체크 카드
+- 가입/인증 폼
+- 커뮤니티 게시판 허브: 공지, 자유/질문, 버그 제보, 건의, 거래/모집, 기록보관
+- Google reCAPTCHA v2 체크박스
+- Netlify Function 기반 가입 중계
+- Discord/Google OAuth 연결 후 HttpOnly 세션 확인
+- Minecraft 인증 코드/운영진 인증 요청 Function 연결
+- Netlify Function 기반 다운로드 allowlist 중계
+- Secret/Webhook/Token 브라우저 노출 방지
 
-## Netlify 배포 방법
-
-1. GitHub에 새 저장소를 만듭니다.
-2. 이 `borimc-netlify-status` 폴더 안의 파일들을 저장소 루트에 업로드합니다.
-3. Netlify에서 `Add new site`를 누릅니다.
-4. `Import from GitHub`를 선택합니다.
-5. 방금 만든 저장소를 선택합니다.
-6. Build command가 아래처럼 되어 있는지 확인합니다.
+## 가입 흐름
 
 ```txt
-npm install && npm run build
+사용자 브라우저
+-> reCAPTCHA 체크
+-> /.netlify/functions/register
+-> Google reCAPTCHA 서버 검증
+-> BoriMC API /registrations
+-> DB 저장/정지/밴/보안 이벤트 기록
+-> 결과 반환
 ```
 
-7. Publish directory가 아래처럼 되어 있는지 확인합니다.
+브라우저는 기본 입력 검사만 합니다. 최종 가입정지, 밴, 경고 판정은 서버 DB 기준으로 처리합니다.
 
-```txt
-.
-```
+## 운영 Function 경로
 
-8. Deploy를 누릅니다.
+- `/.netlify/functions/server-status`: Minecraft 서버 상태와 BoriMC 웹/API 응답 확인
+- `/.netlify/functions/register`: 가입 신청, reCAPTCHA 검증, BoriMC API 중계
+- `/.netlify/functions/auth-session`: Discord/Google 연결 세션 확인
+- `/.netlify/functions/auth-logout`: 연결 세션 해제
+- `/.netlify/functions/verification-status`: 가입/인증 상태 확인
+- `/.netlify/functions/verification-minecraft-code`: Minecraft `/인증 <코드>`용 코드 발급 중계
+- `/.netlify/functions/verification-admin-request`: 운영진 인증 요청 중계
 
-처음 테스트는 Netlify가 주는 기본 `netlify.app` 주소로 하는 것을 권장합니다. 커스텀 도메인 연결은 나중에 선택사항으로 진행하면 됩니다.
-
-## 환경 변수
+## Netlify 환경 변수
 
 Netlify에서 다음 위치로 들어갑니다.
 
@@ -64,105 +87,108 @@ Site settings -> Environment variables
 
 설정할 값:
 
-```txt
+```env
+BORIMC_NETLIFY_SITE_URL=https://borisurvur.netlify.app
 BORIMC_API_URL=https://borimc.p-e.kr
-BORIMC_STATUS_SECRET=아주긴랜덤키
-BORIMC_ADMIN_SECRET=아주긴랜덤키
+BORIMC_MC_HOST=borimc.p-e.kr
+BORIMC_MC_PORT=10259
+BORIMC_STATUS_SECRET=여기에_긴_상태조회_시크릿
+BORIMC_REGISTRATION_SECRET=여기에_긴_가입중계_시크릿
+BORIMC_ADMIN_SECRET=여기에_긴_관리자_시크릿
+BORIMC_IP_HASH_SECRET=여기에_긴_IP해시_시크릿
+BORIMC_SESSION_SECRET=여기에_긴_세션서명_시크릿
+BORIMC_DISCORD_INVITE_URL=https://discord.gg/qsdYqukFnN
+BORIMC_COMMUNITY_URL=https://discord.gg/qsdYqukFnN
+
+BORIMC_DOWNLOAD_LAUNCHER_URL=https://예시가_아닌_실제_런처_URL
+BORIMC_DOWNLOAD_RESOURCEPACK_URL=https://예시가_아닌_실제_리소스팩_URL
+BORIMC_DOWNLOAD_PLUGIN_PACK_URL=https://예시가_아닌_실제_플러그인팩_URL
+
+RECAPTCHA_SITE_KEY=여기에_사이트키
+RECAPTCHA_SECRET_KEY=여기에_시크릿키
+RECAPTCHA_VERSION=v2
+RECAPTCHA_EXPECTED_HOSTNAME=borisurvur.netlify.app
+
+DISCORD_CLIENT_ID=여기에_Discord_Client_ID
+DISCORD_CLIENT_SECRET=여기에_Discord_Client_Secret
+DISCORD_REDIRECT_URI=https://borisurvur.netlify.app/.netlify/functions/auth-discord-callback
+
+GOOGLE_CLIENT_ID=여기에_Google_Client_ID
+GOOGLE_CLIENT_SECRET=여기에_Google_Client_Secret
+GOOGLE_REDIRECT_URI=https://borisurvur.netlify.app/.netlify/functions/auth-google-callback
 ```
 
-`BORIMC_STATUS_SECRET`과 `BORIMC_ADMIN_SECRET`은 HTML, 공개 JS, README, GitHub 저장소에 실제 값을 넣으면 안 됩니다. 반드시 Netlify 환경 변수에만 넣어야 합니다.
+실제 Secret 값은 GitHub, README, `index.html`, 공개 JS에 넣으면 안 됩니다. 반드시 Netlify 환경 변수 또는 BoriMC API 서버 환경 변수에만 넣습니다.
 
-현재 상태 페이지는 `mc-status.js`와 `web-ping.js`로 동작합니다. `api-proxy.js`는 나중에 BoriMC API와 안전하게 연결하기 위한 준비 파일입니다.
+버그 제보는 독립 웹 폼이 아니라 커뮤니티의 버그 제보 게시판에서 진행합니다. 디스코드 초대 링크는 `https://discord.gg/qsdYqukFnN`입니다.
 
-## 마크 서버 상태가 안 뜰 때
+## reCAPTCHA 설정
 
-아래를 확인하세요.
+1. Google reCAPTCHA 콘솔에서 v2 체크박스 사이트를 만듭니다.
+2. 허용 도메인에 `borisurvur.netlify.app`을 추가합니다.
+3. 로컬 테스트가 필요하면 `localhost`도 추가합니다.
+4. Site Key는 `RECAPTCHA_SITE_KEY`에 넣습니다.
+5. Secret Key는 `RECAPTCHA_SECRET_KEY`에 넣습니다.
+6. 배포 후 가입 폼에 체크박스가 보이는지 확인합니다.
+7. 가입 신청 시 `register-request.js`가 Google 검증 API로 token을 검증합니다.
 
-- `borimc.p-e.kr:10259`가 외부 인터넷에서 접속 가능한지
-- 공유기 포트포워딩에서 `10259`가 Paper 서버 컴퓨터로 연결되어 있는지
-- `server.properties`에 `enable-status=true`가 켜져 있는지
-- Paper 서버가 실제로 실행 중인지
-- Windows 방화벽 또는 공유기 방화벽에서 `10259`가 허용되어 있는지
-- Netlify Function 로그에 timeout이 뜨는지
+## BoriMC API 환경 변수
 
-마크 서버가 꺼져 있거나 포트가 닫혀 있으면 페이지는 정상이어도 `오프라인`으로 표시됩니다.
+API 서버에도 같은 가입 Secret을 설정해야 합니다.
 
-## 웹 응답속도가 안 뜰 때
-
-`web-ping.js`는 먼저 아래 주소를 확인합니다.
-
-```txt
-https://borimc.p-e.kr/ping
+```env
+BORIMC_REGISTRATION_SECRET=Netlify와_같은_가입중계_시크릿
+BORIMC_IP_HASH_SECRET=긴_IP해시_시크릿
 ```
 
-이 주소가 실패하면 아래 주소를 한 번 더 확인합니다.
+API DB에는 다음 테이블이 추가됩니다.
 
-```txt
-https://borimc.p-e.kr/
-```
+- `registration_attempts`
+- `registration_bans`
+- `linked_accounts`
+- `registration_security_events`
 
-둘 다 실패하면 웹 응답속도는 실패로 표시됩니다.
+## 보안 정책
 
-## 학교 인터넷에서 접속이 안 될 때
+- 비밀번호는 Netlify 메인 가입 폼에서 받지 않습니다.
+- IP 주소 원문은 저장하지 않고 해시만 저장합니다.
+- 쿠키/로컬스토리지 토큰은 보조 수단입니다.
+- 쿠키 삭제만으로 정지/밴이 풀리지 않게 서버 DB 기록을 사용합니다.
+- reCAPTCHA 실패, honeypot 입력, 반복 시도는 보안 이벤트로 남깁니다.
+- Discord Webhook URL은 공개 HTML에 넣지 않습니다.
+- Bot Token, Google Client Secret, 관리자 키는 절대 프론트에 넣지 않습니다.
 
-이 사이트는 학교 인터넷에서 BoriMC 본 도메인이 막히는 상황을 줄이기 위해 Netlify 기본 도메인을 사용합니다.
+## 학교 인터넷에서 안 될 때
 
-그래도 다음 경우에는 접속이 안 될 수 있습니다.
+다음 경우에는 Netlify 메인도 접속 또는 상태 조회가 안 될 수 있습니다.
 
 - 학교가 Netlify 자체를 차단한 경우
 - 학교 패드 MDM이 미분류 사이트를 막는 경우
-- Netlify Function에서 BoriMC 서버로 접근할 수 없는 경우
 - 마크 서버 포트 `10259`가 외부에서 닫힌 경우
-- 학교 네트워크가 게임 서버 관련 트래픽을 넓게 차단한 경우
+- BoriMC API 서버가 꺼진 경우
+- Netlify Function에서 BoriMC 서버로 접근할 수 없는 경우
 
-학교 테스트용으로는 커스텀 도메인보다 Netlify 기본 `netlify.app` 주소를 유지하는 것이 좋습니다.
+## 배포
 
-## Secret 주의
+GitHub 저장소 루트에 이 폴더의 내용물을 올리고 Netlify에서 Import from GitHub로 연결합니다.
 
-Secret Key는 절대 `index.html`이나 브라우저 JS에 넣으면 안 됩니다.
-
-안 되는 예:
-
-```txt
-index.html 안에 BORIMC_ADMIN_SECRET 작성
-브라우저 JS에서 HMAC 서명 생성
-GitHub README에 실제 secret 작성
-```
-
-맞는 방식:
+Build command:
 
 ```txt
-Netlify Environment variables에 secret 저장
-Netlify Function에서 process.env로 읽기
-브라우저에는 결과 JSON만 반환
+npm install && npm run build
 ```
 
-`api-proxy.js`에는 HMAC-SHA256 요청 서명 함수가 준비되어 있습니다.
-
-사용 헤더:
+Publish directory:
 
 ```txt
-X-Bori-Timestamp
-X-Bori-Nonce
-X-Bori-Signature
-X-Bori-Key-Type
+.
 ```
-
-서명 문자열:
-
-```txt
-METHOD + "\n" + PATH + "\n" + TIMESTAMP + "\n" + NONCE + "\n" + BODY_SHA256
-```
-
-이 서명은 브라우저가 만들지 않고 Netlify Function에서만 만듭니다.
 
 ## 로컬 확인
-
-HTML 모양만 보려면 `index.html`을 브라우저로 열 수 있습니다. Netlify Functions까지 로컬에서 확인하려면 Netlify CLI를 사용합니다.
 
 ```powershell
 npm install
 npx netlify dev
 ```
 
-그 다음 브라우저에서 Netlify Dev 주소를 열면 됩니다.
+로컬에서 reCAPTCHA를 테스트하려면 reCAPTCHA 콘솔에 `localhost`를 허용 도메인으로 추가해야 합니다.
