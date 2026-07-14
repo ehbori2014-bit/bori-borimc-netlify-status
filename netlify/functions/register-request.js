@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { readSession } = require("./_shared/session");
 
 const DEFAULT_API_URL = "https://borimc.p-e.kr";
 const DEFAULT_SITE_URL = "https://borisurvur.netlify.app";
@@ -75,6 +76,8 @@ function basicValidation(body) {
   const firstName = String(body.firstName || "").trim();
   const minecraftName = String(body.minecraftName || "").trim();
   const discordName = String(body.discordName || "").trim();
+  const password = String(body.password || "");
+  const passwordConfirm = String(body.passwordConfirm || "");
   const agreements = body.agreements || {};
   const koreanName = /^[가-힣]+$/;
   const minecraftNamePattern = /^[A-Za-z0-9_]{3,16}$/;
@@ -93,6 +96,12 @@ function basicValidation(body) {
   }
   if (!discordName) {
     return "디스코드 닉네임을 입력해 주세요.";
+  }
+  if (password.length < 8 || password.length > 128) {
+    return "비밀번호는 8~128자로 입력해 주세요.";
+  }
+  if (password !== passwordConfirm) {
+    return "비밀번호 확인이 일치하지 않습니다.";
   }
   if (agreements.rules !== true || agreements.securityLogging !== true) {
     return "서버 규칙과 보안 기록 고지 동의가 필요합니다.";
@@ -256,6 +265,8 @@ exports.handler = async (event) => {
   const body = parsed.body;
   const context = hashContext(event, body);
   const ip = requestIp(event);
+  const sessionResult = readSession(event.headers || {});
+  const linkedSession = sessionResult.authenticated ? sessionResult.session : null;
 
   if (!String(body.captchaToken || "").trim()) {
     await sendSecurityEvent({
@@ -321,7 +332,11 @@ exports.handler = async (event) => {
     firstName: String(body.firstName || "").trim(),
     minecraftName: String(body.minecraftName || "").trim(),
     discordName: String(body.discordName || "").trim(),
-    googleEmail: String(body.googleEmail || "").trim(),
+    password: String(body.password || ""),
+    passwordConfirm: String(body.passwordConfirm || ""),
+    discordId: linkedSession && linkedSession.provider === "discord" ? linkedSession.providerUserId : "",
+    googleSub: linkedSession && linkedSession.provider === "google" ? linkedSession.providerUserId : "",
+    googleEmail: String(body.googleEmail || (linkedSession && linkedSession.provider === "google" ? linkedSession.email : "") || "").trim(),
     agreements: body.agreements || {},
     captcha: {
       provider: "recaptcha",
