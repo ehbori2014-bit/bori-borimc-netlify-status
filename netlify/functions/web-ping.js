@@ -1,7 +1,4 @@
-const TARGETS = [
-  "https://borimc.p-e.kr/ping",
-  "https://borimc.p-e.kr/"
-];
+const DEFAULT_API_URL = "https://borimc.p-e.kr";
 const TIMEOUT_MS = 5000;
 
 function json(statusCode, body) {
@@ -53,9 +50,14 @@ async function timedFetch(target) {
 }
 
 exports.handler = async () => {
+  const baseUrl = (process.env.BORIMC_API_URL || DEFAULT_API_URL).replace(/\/+$/, "");
+  const targets = [
+    `${baseUrl}/ping`,
+    `${baseUrl}/`
+  ];
   let lastError = "request failed";
 
-  for (const target of TARGETS) {
+  for (const target of targets) {
     try {
       const result = await timedFetch(target);
       if (result.ok) {
@@ -69,7 +71,7 @@ exports.handler = async () => {
 
   return json(200, {
     ok: false,
-    target: TARGETS[0],
+    target: targets[0],
     error: lastError,
     checkedAt: new Date().toISOString()
   });
