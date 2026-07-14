@@ -61,11 +61,11 @@ borimc-netlify-status/
 -> /.netlify/functions/register
 -> Google reCAPTCHA 서버 검증
 -> BoriMC API /registrations
--> DB 저장/정지/밴/보안 이벤트 기록
+-> DB 저장/자동 승인/정지/밴/보안 이벤트 기록
 -> 결과 반환
 ```
 
-브라우저는 기본 입력 검사만 합니다. 최종 가입정지, 밴, 경고 판정은 서버 DB 기준으로 처리합니다.
+브라우저는 기본 입력 검사만 합니다. 최종 자동 승인, 가입정지, 밴, 경고 판정은 서버 DB 기준으로 처리합니다. 비밀번호는 API 서버에서 해시로만 저장하고 원문은 저장하지 않습니다.
 
 ## 운영 Function 경로
 
@@ -147,16 +147,27 @@ API DB에는 다음 테이블이 추가됩니다.
 - `registration_bans`
 - `linked_accounts`
 - `registration_security_events`
+- `admin_accounts`
 
 ## 보안 정책
 
-- 비밀번호는 Netlify 메인 가입 폼에서 받지 않습니다.
+- 비밀번호는 가입 폼에서 입력받지만 원문을 저장하지 않고 API 서버에서 PBKDF2 해시로만 보관합니다.
 - IP 주소 원문은 저장하지 않고 해시만 저장합니다.
 - 쿠키/로컬스토리지 토큰은 보조 수단입니다.
 - 쿠키 삭제만으로 정지/밴이 풀리지 않게 서버 DB 기록을 사용합니다.
 - reCAPTCHA 실패, honeypot 입력, 반복 시도는 보안 이벤트로 남깁니다.
 - Discord Webhook URL은 공개 HTML에 넣지 않습니다.
 - Bot Token, Google Client Secret, 관리자 키는 절대 프론트에 넣지 않습니다.
+
+## 관리자 API
+
+관리자 API는 반드시 `BORIMC_ADMIN_SESSION_SECRET` 또는 `BORIMC_ADMIN_SECRET` 값으로 호출합니다.
+
+- `POST /api/admin/registration-bans`: Discord ID, Minecraft UUID/닉네임, Google subject/email 기준 가입 밴 등록
+- `GET /api/admin/registration-bans`: 가입 밴 목록 확인
+- `POST /api/admin/registration/{ban_id}/unban`: 가입 밴 해제
+- `POST /api/admin/admins`: Discord/Google/Minecraft 기준 관리자 계정 등록
+- `GET /api/admin/registrations`: 가입 신청/자동 승인 기록 확인
 
 ## 학교 인터넷에서 안 될 때
 
