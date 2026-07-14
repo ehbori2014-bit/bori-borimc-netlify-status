@@ -1443,7 +1443,7 @@
         <div class="section-head">
           <div>
             <h1>가입과 인증</h1>
-            <p>비밀번호는 이 페이지에서 받지 않습니다. 가입 신청은 Netlify Function을 거쳐 BoriMC API에서 검증하고 저장합니다.</p>
+            <p>비밀번호는 Netlify Function을 거쳐 API 서버에서 해시로만 저장합니다. 정상 검증이 끝나면 가입은 자동 승인됩니다.</p>
           </div>
           <button class="secondary" data-page-link="home">홈으로 이동</button>
         </div>
@@ -1481,6 +1481,17 @@
                 <input id="googleEmail" name="googleEmail" placeholder="선택 입력 또는 Google 연결" autocomplete="email" />
               </div>
 
+              <div class="form-grid">
+                <div class="field">
+                  <label for="password">가입 비밀번호</label>
+                  <input id="password" name="password" type="password" placeholder="8자 이상" minlength="8" maxlength="128" autocomplete="new-password" />
+                </div>
+                <div class="field">
+                  <label for="passwordConfirm">비밀번호 확인</label>
+                  <input id="passwordConfirm" name="passwordConfirm" type="password" placeholder="한 번 더 입력" minlength="8" maxlength="128" autocomplete="new-password" />
+                </div>
+              </div>
+
               <div class="honeypot" aria-hidden="true">
                 <label for="homepage">홈페이지</label>
                 <input id="homepage" name="homepage" tabindex="-1" autocomplete="off" />
@@ -1501,8 +1512,8 @@
                 <span class="small muted" id="captchaStatus">reCAPTCHA 설정을 확인하고 있습니다.</span>
               </div>
 
-              <button class="primary" id="registerSubmit" type="submit" style="width:100%;margin-top:16px" disabled>가입 신청</button>
-              <div class="form-status" id="registerStatus">성, 이름, 마크닉, 디스코드닉을 입력하고 사람 인증을 완료해 주세요.</div>
+              <button class="primary" id="registerSubmit" type="submit" style="width:100%;margin-top:16px" disabled>자동 가입 신청</button>
+              <div class="form-status" id="registerStatus">성, 이름, 마크닉, 디스코드닉, 비밀번호를 입력하고 사람 인증을 완료해 주세요.</div>
             </form>
           </section>
 
@@ -1536,7 +1547,7 @@
               <span class="tag">운영 기준</span>
             </div>
             <div class="check-list">
-              <div class="check">비밀번호는 Netlify 메인 가입 폼에서 받지 않습니다.</div>
+              <div class="check">비밀번호 원문은 저장하지 않고 API 서버에서 해시로만 보관합니다.</div>
               <div class="check">가입 검증은 브라우저가 아니라 Netlify Function과 BoriMC API 서버에서 처리합니다.</div>
               <div class="check">이름/마크닉 이상, UUID 조회 실패, 반복 시도는 6시간 제한 또는 관리자 검토로 넘어갑니다.</div>
               <div class="check">쿠키 삭제만으로 우회되지 않게 IP 해시, 기기 토큰 해시, 계정 연결 기록을 함께 확인합니다.</div>
@@ -2327,6 +2338,8 @@
       const firstName = form.firstName.value.trim();
       const minecraftName = form.minecraftName.value.trim();
       const discordName = form.discordName.value.trim();
+      const password = form.password.value;
+      const passwordConfirm = form.passwordConfirm.value;
       const koreanName = /^[가-힣]+$/;
       const minecraftNamePattern = /^[A-Za-z0-9_]{3,16}$/;
       const blockedNames = ["ㅋㅋ", "ㅁㄴㅇ", "asdf", "test", "admin", "운영자", "관리자"];
@@ -2338,6 +2351,8 @@
       if (blockedNames.some(item => fullName.includes(item))) return "장난 이름이나 운영진 사칭 이름은 사용할 수 없습니다.";
       if (!minecraftNamePattern.test(minecraftName)) return "마크닉은 영문, 숫자, 언더바만 사용해 3~16자로 입력해 주세요.";
       if (!discordName) return "디스코드 닉네임을 입력해 주세요.";
+      if (password.length < 8 || password.length > 128) return "비밀번호는 8~128자로 입력해 주세요.";
+      if (password !== passwordConfirm) return "비밀번호 확인이 일치하지 않습니다.";
       if (!form.rulesAgreement.checked || !form.securityLoggingAgreement.checked) return "서버 규칙과 보안 기록 고지 동의가 필요합니다.";
       return "";
     }
@@ -2435,6 +2450,8 @@
           firstName: registerForm.firstName.value.trim(),
           minecraftName: registerForm.minecraftName.value.trim(),
           discordName: registerForm.discordName.value.trim(),
+          password: registerForm.password.value,
+          passwordConfirm: registerForm.passwordConfirm.value,
           googleEmail: registerForm.googleEmail.value.trim(),
           captchaToken,
           honeypot: registerForm.homepage.value,
@@ -2668,16 +2685,7 @@
       } else {
         mineMessageEl.textContent = "서버가 온라인입니다. 새 지뢰찾기 판은 서버 오프라인일 때만 시작할 수 있습니다.";
       }
-      const cooldownMs = getRestartCooldownAfterGame(win);
-      mineState.cooldownUntil = Date.now() + cooldownMs;
-
-      if (!win && cooldownMs > 0) {
-        const correctFlags = getCorrectFlagCount();
-        const reducedSec = correctFlags * 2;
-        mineMessageEl.innerHTML += `<br><span class="small muted">재시작 쿨타임 ${Math.ceil(cooldownMs / 1000)}초 · 정확한 깃발 ${correctFlags}개로 ${reducedSec}초 감소</span>`;
-      } else if (win) {
-        mineMessageEl.innerHTML += `<br><span class="small muted">성공했으므로 재시작 쿨타임 없음</span>`;
-      }
+      mineState.cooldownUntil = 0;
 
       renderMinesweeper();
       updateMineStats();
